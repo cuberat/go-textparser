@@ -35,15 +35,27 @@ import (
     utf8 "unicode/utf8"
 )
 
+type TokenType int
+
 const (
-    TokenTypeWhitespace = (iota + 1)
+    TokenTypeWhitespace TokenType = iota
     TokenTypeIdent
     TokenTypeString
-    TokenTypeComment // TODO
+    TokenTypeComment
     TokenTypeInt
     TokenTypeFloat
     TokenTypeSymbol
 )
+
+func (t TokenType) String() string {
+    types := [...]string{"Whitespace", "Ident", "String", "Comment",
+        "Int", "Float", "Symbol"}
+    if int(t) > len(types) - 1 {
+        return ""
+    }
+
+    return types[t]
+}
 
 type Position struct {
     Filename string // Filename, if any.
@@ -57,6 +69,20 @@ func (p *Position) String() string {
         p.Offset)
 }
 
+type Token struct {
+    Text string    // The text of the token.
+    NumBytes int   // Number of bytes in the token.
+    NumChars int   // Number of characters/runes in the token.
+    FirstRune rune // First rune in the token.
+    Type TokenType // The type of token.
+}
+
+func (t *Token) String() string {
+    s := fmt.Sprintf("t=%s r=%c nc=%d nb=%d: %q", t.Type, t.FirstRune,
+        t.NumChars, t.NumBytes, t.Text)
+    return s
+}
+
 type TokenScanner struct {
     filename string
     reader *bufio.Reader
@@ -67,7 +93,10 @@ type TokenScanner struct {
     last_col int
     eol rune
 
+    // Indicator to skip whitespace tokens.
     SkipWhitespace bool
+
+    // Indicator to skip comment tokens.
     SkipComments bool
 
     LastToken *Token
@@ -230,6 +259,10 @@ func (ts *TokenScanner) Init(r io.Reader) {
 
 func (ts *TokenScanner) Err() error {
     return ts.last_err
+}
+
+func (ts *TokenScanner) Token() *Token {
+    return ts.LastToken
 }
 
 func (ts *TokenScanner) TokenText() string {
@@ -447,15 +480,6 @@ func (ts *TokenScanner) peek_multirune(num_runes int) ([]rune, error) {
 
     return runes, nil
 }
-
-type Token struct {
-    Text string
-    NumBytes int
-    NumChars int
-    FirstRune rune
-    Type int
-}
-
 
 func (ts *TokenScanner) get_ident() (*Token, error) {
     var (
@@ -701,7 +725,7 @@ func (ts *TokenScanner) get_quoted() (*Token, error) {
 type predicate_func func(rune) bool
 
 func (ts *TokenScanner) get_general(
-    token_type int,
+    token_type TokenType,
     rune_check predicate_func,
     exceptions ...predicate_func,
 ) (*Token, error) {

@@ -13,6 +13,7 @@ type TestData struct {
     Name string
     Input string
     Expected []string
+    ExpectedTokens []*textparser.Token
 }
 
 func TestSkipWhitespace(t *testing.T) {
@@ -564,6 +565,109 @@ func TestPositionEmbeddedEOL(t *testing.T) {
             if !reflect.DeepEqual(pos, expected_pos[idx]) {
                 st.Errorf("token %q: got %s, expected %s",
                     p.TokenText(), pos, expected_pos[idx])
+            }
+        })
+    }
+}
+
+func TestTokens(t *testing.T) {
+    tests := []*TestData{
+        &TestData{
+            Name: `line comment (//)`,
+            Input: `foo = // h4x0r and stuff`,
+            Expected: []string{"foo", "=", `// h4x0r and stuff`},
+            ExpectedTokens: []*textparser.Token{
+                &textparser.Token{
+                    Text: "foo",
+                    NumBytes: 3,
+                    NumChars: 3,
+                    FirstRune: 'f',
+                    Type: textparser.TokenTypeIdent,
+                },
+                &textparser.Token{
+                    Text: " ",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: ' ',
+                    Type: textparser.TokenTypeWhitespace,
+                },
+                &textparser.Token{
+                    Text: "=",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '=',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: " ",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: ' ',
+                    Type: textparser.TokenTypeWhitespace,
+                },
+                &textparser.Token{
+                    Text: `// h4x0r and stuff`,
+                    NumBytes: 18,
+                    NumChars: 18,
+                    FirstRune: '/',
+                    Type: textparser.TokenTypeComment,
+                },
+            },
+        },
+
+        &TestData{
+            Name: `numbers`,
+            Input: `5 42.5`,
+            ExpectedTokens: []*textparser.Token{
+                &textparser.Token{
+                    Text: "5",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '5',
+                    Type: textparser.TokenTypeInt,
+                },
+                &textparser.Token{
+                    Text: " ",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: ' ',
+                    Type: textparser.TokenTypeWhitespace,
+                },
+                &textparser.Token{
+                    Text: "42.5",
+                    NumBytes: 4,
+                    NumChars: 4,
+                    FirstRune: '4',
+                    Type: textparser.TokenTypeFloat,
+                },
+            },
+        },
+    }
+
+    for _, test_data := range tests {
+        t.Run(test_data.Name, func(st *testing.T) {
+            p := new(textparser.TokenScanner)
+            p.Init(strings.NewReader(test_data.Input))
+            p.SkipWhitespace = false
+            p.SkipComments = false
+
+            token_list := make([]*textparser.Token, 0,
+                len(test_data.ExpectedTokens))
+
+            for p.Scan() {
+                token_list = append(token_list, p.Token())
+            }
+
+            if err := p.Err(); err != nil {
+                if err != io.EOF {
+                    st.Errorf("error from scanner: %s", err)
+                    return
+                }
+            }
+
+            if !reflect.DeepEqual(test_data.ExpectedTokens, token_list) {
+                st.Errorf("got %+v, expected %+v",
+                    token_list, test_data.ExpectedTokens)
             }
         })
     }
