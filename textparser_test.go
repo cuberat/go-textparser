@@ -672,3 +672,40 @@ func TestTokens(t *testing.T) {
         })
     }
 }
+
+func ExampleSetVar() {
+    src := `
+    // This is a comment.
+    if a > 5 {
+        b = "this is a string";
+        c = 7.2;
+    }
+    `
+    s := textparser.NewScanner(strings.NewReader(src))
+    s.SetFilename("nofile")
+
+    for s.Scan() {
+        if err := s.Err(); err != nil {
+            panic(fmt.Sprintf("error at %s: %s", s.Position(), err))
+        }
+        token := s.Token()
+        fmt.Printf("%-16s - %-6s -> %s\n", s.Position(), token.Type,
+            token.Text)
+    }
+
+    // Output:
+    // nofile:3:5 (31)  - Ident  -> if
+    // nofile:3:8 (34)  - Ident  -> a
+    // nofile:3:10 (36) - Symbol -> >
+    // nofile:3:12 (38) - Int    -> 5
+    // nofile:3:14 (40) - Symbol -> {
+    // nofile:4:9 (50)  - Ident  -> b
+    // nofile:4:11 (52) - Symbol -> =
+    // nofile:4:13 (54) - String -> "this is a string"
+    // nofile:4:30 (72) - Symbol -> ;
+    // nofile:5:9 (82)  - Ident  -> c
+    // nofile:5:11 (84) - Symbol -> =
+    // nofile:5:13 (86) - Float  -> 7.2
+    // nofile:5:16 (89) - Symbol -> ;
+    // nofile:6:5 (95)  - Symbol -> }
+}
