@@ -1,3 +1,29 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2020 Don Owens <don@regexguy.com>.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 package textparser
 
 import (
@@ -6,7 +32,9 @@ import (
 
 // This function is the default value for the `IsEscapeRune` field in
 // `TokenScanner`. It returns true if the character is a reverse solidus (\).
-func IsEscapeRune(ch rune) (bool) {
+// Where `i` is the index of `ch` in the current token parse, and `runes` is
+// the list of runes already excepted for the current token.
+func IsEscapeRune(ch rune, i int, runes []rune) (bool) {
     if ch == '\\' {
         return true
     }
@@ -15,8 +43,12 @@ func IsEscapeRune(ch rune) (bool) {
 }
 
 // This function is the default value for the `IsSymbolRune` field in
-// `TokenScanner`.
-func IsSymbolRune(ch rune) bool {
+// `TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+// and `runes` is the list of runes already excepted for the current token.
+func IsSymbolRune(ch rune, i int, runes []rune) bool {
+    if i > 0 {
+        return false
+    }
     if ok, _ := IsQuoteRune(ch); ok {
         return false
     }
@@ -32,9 +64,17 @@ func IsSymbolRune(ch rune) bool {
     return false
 }
 
+// This function is the default value for the `IsDigitRune` field in
+// `TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+// and `runes` is the list of runes already excepted for the current token.
+func IsDigitRune(ch rune, i int, runes []rune) bool {
+    return unicode.IsDigit(ch)
+}
+
 // This function is the default value for the `IsIdentRune` field in
-// `TokenScanner`.
-func IsIdentRune(ch rune, i int) bool {
+// `TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+// and `runes` is the list of runes already excepted for the current token.
+func IsIdentRune(ch rune, i int, runes []rune) bool {
     if unicode.IsLetter(ch) {
         return true
     }
@@ -104,4 +144,15 @@ func IsQuoteRune(ch rune) (bool, rune) {
     }
 
     return false, 0
+}
+
+// This function is the default value for the `IsIdentRune` field in
+// `TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+// and `runes` is the list of runes already excepted for the current token.
+func IsSpaceRune(ch rune, i int, runes []rune) bool {
+    if unicode.IsSpace(ch) {
+        return true
+    }
+
+    return false
 }
