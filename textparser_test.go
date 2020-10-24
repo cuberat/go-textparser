@@ -14,6 +14,7 @@ type TestData struct {
     Input string
     Expected []string
     ExpectedTokens []*textparser.Token
+    ExpectedPositions []*textparser.Position
 }
 
 func TestSkipWhitespace(t *testing.T) {
@@ -673,6 +674,270 @@ func TestTokens(t *testing.T) {
     }
 }
 
+func TestSeparateSymbols(t *testing.T) {
+    tests := []*TestData{
+        &TestData{
+            Name: `symbols +=`,
+            Input: `foo += 5`,
+            Expected: []string{"foo", "+", "=", "5"},
+            ExpectedTokens: []*textparser.Token{
+                &textparser.Token{
+                    Text: "foo",
+                    NumBytes: 3,
+                    NumChars: 3,
+                    FirstRune: 'f',
+                    Type: textparser.TokenTypeIdent,
+                },
+                &textparser.Token{
+                    Text: "+",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '+',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "=",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '=',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "5",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '5',
+                    Type: textparser.TokenTypeInt,
+                },
+            },
+        },
+    }
+
+    for _, test_data := range tests {
+        t.Run(test_data.Name, func(st *testing.T) {
+            p := new(textparser.TokenScanner)
+            p.Init(strings.NewReader(test_data.Input))
+            p.SkipWhitespace = true
+            p.SkipComments = true
+
+            token_list := make([]*textparser.Token, 0,
+                len(test_data.ExpectedTokens))
+
+            for p.Scan() {
+                token_list = append(token_list, p.Token())
+            }
+
+            if err := p.Err(); err != nil {
+                if err != io.EOF {
+                    st.Errorf("error from scanner: %s", err)
+                    return
+                }
+            }
+
+            if !reflect.DeepEqual(test_data.ExpectedTokens, token_list) {
+                st.Errorf("got %+v, expected %+v",
+                    token_list, test_data.ExpectedTokens)
+            }
+        })
+    }
+}
+
+func TestSomeSeparateSymbols(t *testing.T) {
+    tests := []*TestData{
+        &TestData{
+            Name: `one symbol += rest separate`,
+            Input: `foo += 5 })`,
+            Expected: []string{"foo", "+=", "5", "}", ")"},
+            ExpectedTokens: []*textparser.Token{
+                &textparser.Token{
+                    Text: "foo",
+                    NumBytes: 3,
+                    NumChars: 3,
+                    FirstRune: 'f',
+                    Type: textparser.TokenTypeIdent,
+                },
+                &textparser.Token{
+                    Text: "+=",
+                    NumBytes: 2,
+                    NumChars: 2,
+                    FirstRune: '+',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "5",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '5',
+                    Type: textparser.TokenTypeInt,
+                },
+                &textparser.Token{
+                    Text: "}",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '}',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: ")",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: ')',
+                    Type: textparser.TokenTypeSymbol,
+                },
+            },
+        },
+    }
+
+    for _, test_data := range tests {
+        t.Run(test_data.Name, func(st *testing.T) {
+            p := new(textparser.TokenScanner)
+            p.Init(strings.NewReader(test_data.Input))
+            p.SkipWhitespace = true
+            p.SkipComments = true
+
+            p.IsSymbolRune = func(ch rune, i int, runes []rune) bool {
+                if ch == '=' && i == 1 && runes[0] == '+' {
+                    return true
+                }
+
+                return textparser.IsSymbolRune(ch, i, runes)
+            }
+
+            token_list := make([]*textparser.Token, 0,
+                len(test_data.ExpectedTokens))
+
+            for p.Scan() {
+                token_list = append(token_list, p.Token())
+            }
+
+            if err := p.Err(); err != nil {
+                if err != io.EOF {
+                    st.Errorf("error from scanner: %s", err)
+                    return
+                }
+            }
+
+            if !reflect.DeepEqual(test_data.ExpectedTokens, token_list) {
+                st.Errorf("got %+v, expected %+v",
+                    token_list, test_data.ExpectedTokens)
+            }
+        })
+    }
+}
+
+func TestUnreadToken(t *testing.T) {
+    filename := ""
+    tests := []*TestData{
+        &TestData{
+            Name: `UnreadToken`,
+            Input: `foo += 5`,
+            Expected: []string{"foo", "+", "+", "=", "5"},
+            ExpectedTokens: []*textparser.Token{
+                &textparser.Token{
+                    Text: "foo",
+                    NumBytes: 3,
+                    NumChars: 3,
+                    FirstRune: 'f',
+                    Type: textparser.TokenTypeIdent,
+                },
+                &textparser.Token{
+                    Text: "+",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '+',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "+",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '+',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "=",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '=',
+                    Type: textparser.TokenTypeSymbol,
+                },
+                &textparser.Token{
+                    Text: "5",
+                    NumBytes: 1,
+                    NumChars: 1,
+                    FirstRune: '5',
+                    Type: textparser.TokenTypeInt,
+                },
+            },
+            ExpectedPositions: []*textparser.Position{
+                &textparser.Position{
+                    Filename: filename, Offset: 0, Line: 1, Column: 1,
+                },
+                &textparser.Position{
+                    Filename: filename, Offset: 4, Line: 1, Column: 5,
+                },
+                &textparser.Position{
+                    Filename: filename, Offset: 4, Line: 1, Column: 5,
+                },
+                &textparser.Position{
+                    Filename: filename, Offset: 5, Line: 1, Column: 6,
+                },
+                &textparser.Position{
+                    Filename: filename, Offset: 7, Line: 1, Column: 8,
+                },
+            },
+        },
+    }
+
+    for _, test_data := range tests {
+        t.Run(test_data.Name, func(st *testing.T) {
+            p := new(textparser.TokenScanner)
+            p.Init(strings.NewReader(test_data.Input))
+            p.SkipWhitespace = true
+            p.SkipComments = true
+
+            token_list := make([]*textparser.Token, 0,
+                len(test_data.ExpectedTokens))
+
+            if len(test_data.ExpectedTokens) !=
+                len(test_data.ExpectedPositions) {
+                t.Errorf("number of expected tokens != number of expected " +
+                    "positions")
+                return
+            }
+
+            for i := 0; p.Scan(); i++ {
+                if i > len(test_data.ExpectedTokens) - 1 {
+                    t.Errorf("too many tokens: at token %q", p.TokenText())
+                    return
+                }
+                token_list = append(token_list, p.Token())
+                if !reflect.DeepEqual(p.Position(),
+                    test_data.ExpectedPositions[i]) {
+                        t.Errorf("[%d] got pos %s, expected %s", i,
+                            p.Position(), test_data.ExpectedPositions[i])
+                        return
+                    }
+                if i == 1 {
+                    p.UnreadToken()
+                }
+            }
+
+            if err := p.Err(); err != nil {
+                if err != io.EOF {
+                    st.Errorf("error from scanner: %s", err)
+                    return
+                }
+            }
+
+            if !reflect.DeepEqual(test_data.ExpectedTokens, token_list) {
+                st.Errorf("got %+v, expected %+v",
+                    token_list, test_data.ExpectedTokens)
+            }
+        })
+    }
+}
+
 func ExampleSetVar() {
     src := `
     // This is a comment.
@@ -708,4 +973,67 @@ func ExampleSetVar() {
     // nofile:5:13 (86) - Float  -> 7.2
     // nofile:5:16 (89) - Symbol -> ;
     // nofile:6:5 (95)  - Symbol -> }
+}
+
+func ExampleStructTag() {
+    src := `Verbose,del=',',usage='Use it like this.'`
+    s := textparser.NewScanner(strings.NewReader(src))
+    s.SetFilename("")
+
+    for s.Scan() {
+        if err := s.Err(); err != nil {
+            panic(fmt.Sprintf("error at %s: %s", s.Position(), err))
+        }
+        token := s.Token()
+        fmt.Printf("%-16s - %-6s -> %s\n", s.Position(), token.Type,
+            token.Text)
+    }
+
+    // Output:
+    // :1:1 (0)         - Ident  -> Verbose
+    // :1:8 (7)         - Symbol -> ,
+    // :1:9 (8)         - Ident  -> del
+    // :1:12 (11)       - Symbol -> =
+    // :1:13 (12)       - String -> ','
+    // :1:15 (15)       - Symbol -> ,
+    // :1:16 (16)       - Ident  -> usage
+    // :1:21 (21)       - Symbol -> =
+    // :1:22 (22)       - String -> 'Use it like this.'
+}
+
+// Example with customized symbol tokenization.
+func ExampleCustomSymbols() {
+    input := "(foo += 5 +-4)"
+
+    ts := textparser.NewScanner(strings.NewReader(input))
+    ts.SkipWhitespace = true
+    ts.SkipComments = true
+
+    // `+=` is considered one symbol, but all other symbols are single
+    // characters.
+    ts.IsSymbolRune = func(ch rune, i int, runes []rune) bool {
+        if ch == '=' && i == 1 && runes[0] == '+' {
+            return true
+        }
+
+        return textparser.IsSymbolRune(ch, i, runes)
+    }
+
+    for ts.Scan() {
+        if err := ts.Err(); err != nil {
+            fmt.Printf("====> Error during scan: %s", err)
+            break
+        }
+
+        fmt.Printf("%s\n", ts.TokenText())
+    }
+
+    // Output:
+    // (
+    // foo
+    // +=
+    // 5
+    // +
+    // -4
+    // )
 }
