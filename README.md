@@ -68,11 +68,13 @@ Output:
 
 
 ## <a name="pkg-index">Index</a>
-* [func IsEscapeRune(ch rune) bool](#IsEscapeRune)
-* [func IsIdentRune(ch rune, i int) bool](#IsIdentRune)
+* [func IsDigitRune(ch rune, i int, runes []rune) bool](#IsDigitRune)
+* [func IsEscapeRune(ch rune, i int, runes []rune) bool](#IsEscapeRune)
+* [func IsIdentRune(ch rune, i int, runes []rune) bool](#IsIdentRune)
 * [func IsQuoteRune(ch rune) (bool, rune)](#IsQuoteRune)
 * [func IsQuoteRuneFancy(ch rune) (bool, rune)](#IsQuoteRuneFancy)
-* [func IsSymbolRune(ch rune) bool](#IsSymbolRune)
+* [func IsSpaceRune(ch rune, i int, runes []rune) bool](#IsSpaceRune)
+* [func IsSymbolRune(ch rune, i int, runes []rune) bool](#IsSymbolRune)
 * [type Position](#Position)
   * [func (p *Position) String() string](#Position.String)
 * [type Token](#Token)
@@ -89,6 +91,8 @@ Output:
   * [func (ts *TokenScanner) SetFilename(filename string)](#TokenScanner.SetFilename)
   * [func (ts *TokenScanner) Token() *Token](#TokenScanner.Token)
   * [func (ts *TokenScanner) TokenText() string](#TokenScanner.TokenText)
+  * [func (ts *TokenScanner) TokenTextNoQuotes() string](#TokenScanner.TokenTextNoQuotes)
+  * [func (ts *TokenScanner) UnreadToken() error](#TokenScanner.UnreadToken)
 * [type TokenType](#TokenType)
   * [func (t TokenType) String() string](#TokenType.String)
 
@@ -100,25 +104,38 @@ Output:
 
 
 
-## <a name="IsEscapeRune">func</a> [IsEscapeRune](/src/target/classes.go?s=194:227#L1)
+## <a name="IsDigitRune">func</a> [IsDigitRune](/src/target/classes.go?s=2604:2655#L60)
 ``` go
-func IsEscapeRune(ch rune) bool
+func IsDigitRune(ch rune, i int, runes []rune) bool
+```
+This function is the default value for the `IsDigitRune` field in
+`TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+and `runes` is the list of runes already excepted for the current token.
+
+
+
+## <a name="IsEscapeRune">func</a> [IsEscapeRune](/src/target/classes.go?s=1737:1791#L27)
+``` go
+func IsEscapeRune(ch rune, i int, runes []rune) bool
 ```
 This function is the default value for the `IsEscapeRune` field in
 `TokenScanner`. It returns true if the character is a reverse solidus (\).
+Where `i` is the index of `ch` in the current token parse, and `runes` is
+the list of runes already excepted for the current token.
 
 
 
-## <a name="IsIdentRune">func</a> [IsIdentRune](/src/target/classes.go?s=707:744#L27)
+## <a name="IsIdentRune">func</a> [IsIdentRune](/src/target/classes.go?s=2915:2966#L67)
 ``` go
-func IsIdentRune(ch rune, i int) bool
+func IsIdentRune(ch rune, i int, runes []rune) bool
 ```
 This function is the default value for the `IsIdentRune` field in
-`TokenScanner`.
+`TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+and `runes` is the list of runes already excepted for the current token.
 
 
 
-## <a name="IsQuoteRune">func</a> [IsQuoteRune](/src/target/classes.go?s=2132:2170#L86)
+## <a name="IsQuoteRune">func</a> [IsQuoteRune](/src/target/classes.go?s=4354:4392#L126)
 ``` go
 func IsQuoteRune(ch rune) (bool, rune)
 ```
@@ -128,7 +145,7 @@ back ticks (`) as quote characters.
 
 
 
-## <a name="IsQuoteRuneFancy">func</a> [IsQuoteRuneFancy](/src/target/classes.go?s=1485:1528#L62)
+## <a name="IsQuoteRuneFancy">func</a> [IsQuoteRuneFancy](/src/target/classes.go?s=3707:3750#L102)
 ``` go
 func IsQuoteRuneFancy(ch rune) (bool, rune)
 ```
@@ -147,17 +164,28 @@ more fancy ones specified in Unicode).
 
 
 
-## <a name="IsSymbolRune">func</a> [IsSymbolRune](/src/target/classes.go?s=386:417#L9)
+## <a name="IsSpaceRune">func</a> [IsSpaceRune](/src/target/classes.go?s=4817:4868#L142)
 ``` go
-func IsSymbolRune(ch rune) bool
+func IsSpaceRune(ch rune, i int, runes []rune) bool
+```
+This function is the default value for the `IsIdentRune` field in
+`TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+and `runes` is the list of runes already excepted for the current token.
+
+
+
+## <a name="IsSymbolRune">func</a> [IsSymbolRune](/src/target/classes.go?s=2085:2137#L38)
+``` go
+func IsSymbolRune(ch rune, i int, runes []rune) bool
 ```
 This function is the default value for the `IsSymbolRune` field in
-`TokenScanner`.
+`TokenScanner`. Where `i` is the index of `ch` in the current token parse,
+and `runes` is the list of runes already excepted for the current token.
 
 
 
 
-## <a name="Position">type</a> [Position](/src/target/textparser.go?s=4127:4365#L106)
+## <a name="Position">type</a> [Position](/src/target/textparser.go?s=4113:4351#L105)
 ``` go
 type Position struct {
     Filename string // Filename, if any.
@@ -177,7 +205,7 @@ Represents the position of the current token.
 
 
 
-### <a name="Position.String">func</a> (\*Position) [String](/src/target/textparser.go?s=4427:4461#L114)
+### <a name="Position.String">func</a> (\*Position) [String](/src/target/textparser.go?s=4413:4447#L113)
 ``` go
 func (p *Position) String() string
 ```
@@ -186,7 +214,7 @@ Returns a string representation of the current position.
 
 
 
-## <a name="Token">type</a> [Token](/src/target/textparser.go?s=4567:4836#L120)
+## <a name="Token">type</a> [Token](/src/target/textparser.go?s=4553:4822#L119)
 ``` go
 type Token struct {
     Text      string    // The text of the token.
@@ -207,14 +235,14 @@ A Token.
 
 
 
-### <a name="Token.String">func</a> (\*Token) [String](/src/target/textparser.go?s=4838:4869#L128)
+### <a name="Token.String">func</a> (\*Token) [String](/src/target/textparser.go?s=4824:4855#L127)
 ``` go
 func (t *Token) String() string
 ```
 
 
 
-## <a name="TokenScanner">type</a> [TokenScanner](/src/target/textparser.go?s=5018:6590#L135)
+## <a name="TokenScanner">type</a> [TokenScanner](/src/target/textparser.go?s=5004:7610#L134)
 ``` go
 type TokenScanner struct {
 
@@ -228,15 +256,17 @@ type TokenScanner struct {
     LastToken *Token
 
     // Predicate controlling the characters accepted as the i'th rune in an
-    // identifier (starting at zero). The set of valid characters must not
+    // identifier (starting at zero). `runes` is the slice of runes accepted
+    // so far for this token. The set of valid characters must not
     // intersect with the set of white space characters. The default is the
     // IsIdentRune function defined in this module.
-    IsIdentRune func(ch rune, i int) bool
+    IsIdentRune func(ch rune, i int, runes []rune) bool
 
-    // Predicate controlling the characters accepted as white space. The
-    // default value is `unicode.IsSpace()`, which decides based on Unicode's
-    // White Space property.
-    IsSpaceRune func(ch rune) bool
+    // Predicate controlling the characters accepted as the i'th rune in a run
+    // of white space. `runes` is the slice of runes accepted so far for this
+    // token. The default value is `unicode.IsSpace()`, which decides based on
+    // Unicode's White Space property.
+    IsSpaceRune func(ch rune, i int, runes []rune) bool
 
     // Predicate controlling the characters accepted as quoting runes. Returns
     // true/false, as well as the corresponding closing quote rune. The
@@ -244,14 +274,23 @@ type TokenScanner struct {
     IsQuoteRune func(ch rune) (bool, rune)
 
     // Predicate controlling the characters accepted as escape runes, e.g.,
-    // for escaping a quote character inside quotes.
-    IsEscapeRune func(ch rune) bool
+    // for escaping a quote character inside quotes. `i` is the index of the
+    // current rune being considered for this token. `runes` is the list of
+    // runes already accepted for this token.
+    IsEscapeRune func(ch rune, i int, runes []rune) bool
 
-    // Predicate controlling the characters accepted as symbols.
-    IsSymbolRune func(ch rune) bool
+    // Predicate controlling the characters accepted as the i'th rune in a
+    // symbol token (starting at zero). `runes` is the list of runes already
+    // accepted for this token. The default predicate considers each symbol to
+    // be its own token. This can be customized to allow for tokens to consist
+    // of groups of certain symbols. One of the examples in the documentation
+    // and test file does this.
+    IsSymbolRune func(ch rune, i int, runes []rune) bool
 
-    // Predicate controlling the characters accepted as numeric digits.
-    IsDigitRune func(ch rune) bool
+    // Predicate controlling the characters accepted as numeric digits. `i` is
+    // the index of the current rune being considered for this token. `runes`
+    // is the list of runes already accepted for this token.
+    IsDigitRune func(ch rune, i int, runes []rune) bool
     // contains filtered or unexported fields
 }
 ```
@@ -263,14 +302,14 @@ A TokenScanner.
 
 
 
-### <a name="NewScanner">func</a> [NewScanner](/src/target/textparser.go?s=6839:6881#L188)
+### <a name="NewScanner">func</a> [NewScanner](/src/target/textparser.go?s=7859:7901#L204)
 ``` go
 func NewScanner(r io.Reader) *TokenScanner
 ```
 Returns a new TokenScanner initialized with the provided reader.
 
 
-### <a name="NewScannerBytes">func</a> [NewScannerBytes](/src/target/textparser.go?s=7209:7253#L202)
+### <a name="NewScannerBytes">func</a> [NewScannerBytes](/src/target/textparser.go?s=8229:8273#L218)
 ``` go
 func NewScannerBytes(b []byte) *TokenScanner
 ```
@@ -278,7 +317,7 @@ Returns a TokenScanner initialized with the contents of the provided
 byte slice.
 
 
-### <a name="NewScannerString">func</a> [NewScannerString](/src/target/textparser.go?s=7027:7072#L196)
+### <a name="NewScannerString">func</a> [NewScannerString](/src/target/textparser.go?s=8047:8092#L212)
 ``` go
 func NewScannerString(s string) *TokenScanner
 ```
@@ -289,7 +328,7 @@ string.
 
 
 
-### <a name="TokenScanner.Err">func</a> (\*TokenScanner) [Err](/src/target/textparser.go?s=7997:8032#L233)
+### <a name="TokenScanner.Err">func</a> (\*TokenScanner) [Err](/src/target/textparser.go?s=9077:9112#L252)
 ``` go
 func (ts *TokenScanner) Err() error
 ```
@@ -298,7 +337,7 @@ Returns the last error encountered.
 
 
 
-### <a name="TokenScanner.Init">func</a> (\*TokenScanner) [Init](/src/target/textparser.go?s=7447:7488#L208)
+### <a name="TokenScanner.Init">func</a> (\*TokenScanner) [Init](/src/target/textparser.go?s=8467:8508#L224)
 ``` go
 func (ts *TokenScanner) Init(r io.Reader)
 ```
@@ -308,7 +347,7 @@ a TokenScanner is created outside of one of the New* functions.
 
 
 
-### <a name="TokenScanner.Position">func</a> (\*TokenScanner) [Position](/src/target/textparser.go?s=6703:6747#L183)
+### <a name="TokenScanner.Position">func</a> (\*TokenScanner) [Position](/src/target/textparser.go?s=7723:7767#L199)
 ``` go
 func (ts *TokenScanner) Position() *Position
 ```
@@ -318,7 +357,7 @@ object is used throughout parsing.
 
 
 
-### <a name="TokenScanner.Scan">func</a> (\*TokenScanner) [Scan](/src/target/textparser.go?s=9322:9357#L280)
+### <a name="TokenScanner.Scan">func</a> (\*TokenScanner) [Scan](/src/target/textparser.go?s=11487:11522#L339)
 ``` go
 func (ts *TokenScanner) Scan() bool
 ```
@@ -329,7 +368,7 @@ parsing is completed. Check ts.Err() for parsing errors.
 
 
 
-### <a name="TokenScanner.SetEOL">func</a> (\*TokenScanner) [SetEOL](/src/target/textparser.go?s=8463:8503#L252)
+### <a name="TokenScanner.SetEOL">func</a> (\*TokenScanner) [SetEOL](/src/target/textparser.go?s=10604:10644#L309)
 ``` go
 func (ts *TokenScanner) SetEOL(eol rune)
 ```
@@ -338,7 +377,7 @@ Sets the rune considered to be the end-of-line character.
 
 
 
-### <a name="TokenScanner.SetFilename">func</a> (\*TokenScanner) [SetFilename](/src/target/textparser.go?s=8581:8633#L257)
+### <a name="TokenScanner.SetFilename">func</a> (\*TokenScanner) [SetFilename](/src/target/textparser.go?s=10722:10774#L314)
 ``` go
 func (ts *TokenScanner) SetFilename(filename string)
 ```
@@ -347,7 +386,7 @@ Sets the file name returned in the Position object.
 
 
 
-### <a name="TokenScanner.Token">func</a> (\*TokenScanner) [Token](/src/target/textparser.go?s=8125:8163#L238)
+### <a name="TokenScanner.Token">func</a> (\*TokenScanner) [Token](/src/target/textparser.go?s=9205:9243#L257)
 ``` go
 func (ts *TokenScanner) Token() *Token
 ```
@@ -356,7 +395,7 @@ Returns the most recent token generated by a call to Scan().
 
 
 
-### <a name="TokenScanner.TokenText">func</a> (\*TokenScanner) [TokenText](/src/target/textparser.go?s=8271:8313#L243)
+### <a name="TokenScanner.TokenText">func</a> (\*TokenScanner) [TokenText](/src/target/textparser.go?s=10007:10049#L286)
 ``` go
 func (ts *TokenScanner) TokenText() string
 ```
@@ -365,7 +404,28 @@ Returns the text from the most recent token generated by a call to Scan().
 
 
 
-## <a name="TokenType">type</a> [TokenType](/src/target/textparser.go?s=3589:3607#L81)
+### <a name="TokenScanner.TokenTextNoQuotes">func</a> (\*TokenScanner) [TokenTextNoQuotes](/src/target/textparser.go?s=10288:10338#L296)
+``` go
+func (ts *TokenScanner) TokenTextNoQuotes() string
+```
+Returns the text from the most recent token generated by a call to Scan().
+If the token is a quoted string, the surrounding quotes are removed.
+
+
+
+
+### <a name="TokenScanner.UnreadToken">func</a> (\*TokenScanner) [UnreadToken](/src/target/textparser.go?s=9582:9625#L269)
+``` go
+func (ts *TokenScanner) UnreadToken() error
+```
+Pretends the current token was not read. The next call to `Scan()` and
+`Token()` will return the current token. Once invoked, further
+`UnreadToken()` calls are invalid until the next `Scan()` call.
+
+
+
+
+## <a name="TokenType">type</a> [TokenType](/src/target/textparser.go?s=3575:3593#L80)
 ``` go
 type TokenType int
 ```
@@ -392,7 +452,7 @@ Supported token types.
 
 
 
-### <a name="TokenType.String">func</a> (TokenType) [String](/src/target/textparser.go?s=3857:3891#L95)
+### <a name="TokenType.String">func</a> (TokenType) [String](/src/target/textparser.go?s=3843:3877#L94)
 ``` go
 func (t TokenType) String() string
 ```
